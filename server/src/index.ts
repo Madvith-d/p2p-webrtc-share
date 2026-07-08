@@ -6,11 +6,16 @@ import { Peer } from "../../shared/types";
 
 const app = express();
 
-const server = app.listen(3000, () => {
-  console.log("Server started on port 3000");
+const server = app.listen(3001, () => {
+  console.log("Server started on port 3001");
 });
 
-const io = new Server(server);
+const io = new Server(server , {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
 const roomManager = new RoomManager();
 
 io.on("connection", (socket) => {
@@ -22,6 +27,7 @@ io.on("connection", (socket) => {
       socketId: socket.id
     };
     roomManager.addPeerToRoom(payload.roomId, peer);
+    console.log("Peer added to room", payload.roomId, peer);
     socket.emit("room-updated", roomManager.getRoom(payload.roomId));
   });
 
@@ -34,6 +40,7 @@ io.on("connection", (socket) => {
       name: payload.name,
       socketId: socket.id
     });
+    console.log("Room created", room);
     socket.emit("room-created", room);
   })
 });
