@@ -5,7 +5,7 @@ export interface Peer {
 }
 
 export interface Room {
-   
     roomId: string;
+    hostId: string;
     peers: Peer[];
 }

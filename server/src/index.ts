@@ -28,10 +28,14 @@ io.on("connection", (socket) => {
       name: payload.name,
       socketId: socket.id
     };
-    roomManager.addPeerToRoom(payload.roomId, peer);
+    const result = roomManager.addPeerToRoom(payload.roomId, peer);
+    if (!result.ok) {
+      socket.emit(result.error);
+      return;
+    }
     socket.join(payload.roomId);
     console.log("Peer added to room", payload.roomId, peer);
-    io.to(payload.roomId).emit("room-updated", roomManager.getRoom(payload.roomId));
+    io.to(payload.roomId).emit("room-updated", result.room);
   });
 
   socket.on("create-room", (
@@ -51,6 +55,10 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log("User disconnected", socket.id);
-    roomManager.removePeerFromAllRooms(socket.id);
+    const affected = roomManager.removePeerFromAllRooms(socket.id);
+    for (const { roomId, room } of affected) {
+      io.to(roomId).emit("peer-left", socket.id);
+      io.to(roomId).emit("room-updated", room);
+    }
   });
 });
