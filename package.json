@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently -n \"server,client\" -c \"blue,magenta\" \"cd server && pnpm tsx --watch src/index.ts\" \"cd client && pnpm run dev\""
   },
   "keywords": [],
   "author": "",
@@ -20,5 +21,8 @@
   "dependencies": {
     "@types/express": "^5.0.6",
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3"
   }
 }

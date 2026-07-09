@@ -30,6 +30,19 @@ export class RoomManager {
         const room = this.rooms.get(roomId);
         if (room) {
             room.peers = room.peers.filter(peer => peer.socketId !== peerId);
+            if (room.peers.length === 0) {
+                this.deleteRoom(roomId);
+            }
+        }
+    }
+    
+    removePeerFromAllRooms(socketId: string) {
+        for (const [roomId, room] of this.rooms) {
+            const before = room.peers.length;
+            room.peers = room.peers.filter(peer => peer.socketId !== socketId);
+            if (room.peers.length === 0) {
+                this.deleteRoom(roomId);
+            }
         }
     }
     
