@@ -61,4 +61,12 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("room-updated", room);
     }
   });
+
+  socket.on("offer", (payload: { roomId: string; offer: any }) => {
+    console.log("Offer received", payload);
+    const otherPeer = roomManager.getOtherPeer(socket.id);
+    if (otherPeer) {
+      io.to(otherPeer.socketId).emit("offer", payload.offer);
+    }
+  });
 });

@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { socket } from "@/lib/socket";
 import { toast } from "sonner";
+import { handleOffer } from "@/webrtc/signaling";
 import {
   Card,
   CardContent,
@@ -35,14 +36,21 @@ export default function RoomPage() {
       router.push("/");
       return;
     }
-
-    socket.on("connect", () => {
+    socket.on("offer", async (offer) => {
+      console.log("Offer received", offer);
+      const answer = await handleOffer(offer);
+      console.log("Answer created", answer);
+    });
+    const onConnect = () => {
       setIsConnected(true);
-    });
+    };
 
-    socket.on("disconnect", () => {
+    const onDisconnect = () => {
       setIsConnected(false);
-    });
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
 
     socket.emit("join-room", {
       roomId,
@@ -67,8 +75,8 @@ export default function RoomPage() {
     socket.on("room-created", onRoomCreated);
 
     return () => {
-      socket.off("connect");
-      socket.off("disconnect");
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
       socket.off("room-updated", onRoomUpdated);
       socket.off("room-created", onRoomCreated);
     };

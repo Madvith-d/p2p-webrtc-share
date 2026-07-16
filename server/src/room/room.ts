@@ -69,4 +69,14 @@ export class RoomManager {
     generateRoomId(): string {
         return Math.random().toString(36).substring(2, 15);
     }
+
+    getOtherPeer(currentPeerId : string) : Peer | undefined {
+        for (const [_, room] of this.rooms) {
+            const otherPeer = room.peers.find(peer => peer.socketId !== currentPeerId);
+            if (otherPeer) {
+                return otherPeer;
+            }
+        }
+        return undefined;
+    }
 }
