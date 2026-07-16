@@ -5,15 +5,16 @@ import { RoomManager } from "./room/room";
 import { Peer } from "../../shared/types";
 
 const app = express();
+const port = Number(process.env.PORT ?? 3001);
 
 const server = http.createServer(app);
-server.listen(3001, () => {
-  console.log("Server started on port 3001");
+server.listen(port, "0.0.0.0", () => {
+  console.log(`Server started on port ${port}`);
 });
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: process.env.CLIENT_ORIGIN ?? "http://localhost:3000",
     methods: ["GET", "POST"],
     credentials: true
   }

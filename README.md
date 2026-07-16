@@ -7,3 +7,11 @@
 - Data never reaches any server, it's shared directly between peers
 - No auth or login required
 
+## Run The App
+```bash
+git clone https://github.com/madvithd/p2p-webrtc-share.git
+
+cd p2p-webrtc-share
+
+docker compose up -d
+```

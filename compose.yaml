@@ -1,0 +1,22 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        NEXT_PUBLIC_SIGNALING_URL: ${NEXT_PUBLIC_SIGNALING_URL:-http://localhost:3001}
+    depends_on:
+      - server
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
