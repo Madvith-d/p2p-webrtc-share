@@ -62,11 +62,24 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("offer", (payload: { roomId: string; offer: any }) => {
-    console.log("Offer received", payload);
-    const otherPeer = roomManager.getOtherPeer(socket.id);
+  socket.on("offer", (payload: { roomId: string; offer: unknown }) => {
+    const otherPeer = roomManager.getOtherPeer(payload.roomId, socket.id);
     if (otherPeer) {
       io.to(otherPeer.socketId).emit("offer", payload.offer);
+    }
+  });
+
+  socket.on("answer", (payload: { roomId: string; answer: unknown }) => {
+    const otherPeer = roomManager.getOtherPeer(payload.roomId, socket.id);
+    if (otherPeer) {
+      io.to(otherPeer.socketId).emit("answer", payload.answer);
+    }
+  });
+
+  socket.on("ice-candidate", (payload: { roomId: string; candidate: unknown }) => {
+    const otherPeer = roomManager.getOtherPeer(payload.roomId, socket.id);
+    if (otherPeer) {
+      io.to(otherPeer.socketId).emit("ice-candidate", payload.candidate);
     }
   });
 });

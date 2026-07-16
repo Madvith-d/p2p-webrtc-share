@@ -1,10 +1,10 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { socket } from "@/lib/socket";
 import { toast } from "sonner";
-import { handleOffer } from "@/webrtc/signaling";
+import { ConnectionManager } from "@/webrtc/connection";
 import {
   Card,
   CardContent,
@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Room } from "@shared/types";
 import { Users, Copy, Loader2, CheckCircle, Crown } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -29,40 +30,26 @@ export default function RoomPage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>("new");
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const connectionRef = useRef<ConnectionManager | null>(null);
 
   useEffect(() => {
     if (!userName) {
       router.push("/");
       return;
     }
-    socket.on("offer", async (offer) => {
-      console.log("Offer received", offer);
-      const answer = await handleOffer(offer);
-      console.log("Answer created", answer);
-    });
-    const onConnect = () => {
-      setIsConnected(true);
-    };
+    const connection = new ConnectionManager();
+    connectionRef.current = connection;
+    connection.initialize(roomId, setConnectionState, (received, total) => setProgress(total ? received / total : 1));
 
-    const onDisconnect = () => {
-      setIsConnected(false);
-    };
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-
-    socket.emit("join-room", {
-      roomId,
-      name: userName,
-    });
-
-    const onRoomUpdated = (updatedRoom: Room) => {
+    const onRoomUpdated = async (updatedRoom: Room) => {
       setRoom(updatedRoom);
-      const currentPeer = updatedRoom.peers.find(p => p.socketId === socket.id);
-      if (currentPeer) {
-        setIsCreator(updatedRoom.peers[0]?.socketId === socket.id);
-      }
+      const isHost = updatedRoom.hostId === socket.id;
+      setIsCreator(isHost);
+      if (updatedRoom.peers.length === 1) connection.reset();
+      if (isHost && updatedRoom.peers.length === 2) await connection.start();
     };
 
     const onRoomCreated = (createdRoom: Room) => {
@@ -73,12 +60,13 @@ export default function RoomPage() {
 
     socket.on("room-updated", onRoomUpdated);
     socket.on("room-created", onRoomCreated);
+    socket.emit("join-room", { roomId, name: userName });
 
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
       socket.off("room-updated", onRoomUpdated);
       socket.off("room-created", onRoomCreated);
+      connection.close();
+      connectionRef.current = null;
     };
   }, [roomId, userName, router]);
 
@@ -89,8 +77,11 @@ export default function RoomPage() {
     toast.success("Room ID copied to clipboard!");
   };
 
-  const handleStartSharing = () => {
-    toast.success("Starting file sharing...");
+  const handleStartSharing = async () => {
+    if (!file || !connectionRef.current) return;
+    setProgress(0);
+    await connectionRef.current.send(file, (sent, total) => setProgress(total ? sent / total : 1));
+    toast.success("File sent");
   };
 
   if (!room) {
@@ -140,7 +131,7 @@ export default function RoomPage() {
                   Participants ({room.peers.length})
                 </h3>
                 <span className="text-sm text-muted-foreground">
-                  {isConnected ? (
+                  {connectionState === "connected" ? (
                     <span className="flex items-center gap-1 text-green-500">
                       <span className="h-2 w-2 rounded-full bg-green-500" />
                       Connected
@@ -148,7 +139,7 @@ export default function RoomPage() {
                   ) : (
                     <span className="flex items-center gap-1 text-red-500">
                       <span className="h-2 w-2 rounded-full bg-red-500" />
-                      Disconnected
+                      {connectionState === "new" ? "Waiting" : connectionState}
                     </span>
                   )}
                 </span>
@@ -187,10 +178,14 @@ export default function RoomPage() {
             </div>
 
             {isCreator && room.peers.length > 1 && (
-              <Button className="w-full" size="lg" onClick={handleStartSharing}>
-                Start File Sharing
-              </Button>
+              <div className="space-y-2">
+                <Input type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+                <Button className="w-full" size="lg" disabled={!file || connectionState !== "connected"} onClick={handleStartSharing}>
+                  Send File
+                </Button>
+              </div>
             )}
+            {progress > 0 && <p className="text-center text-sm">Transfer progress: {Math.round(progress * 100)}%</p>}
             {!isCreator && (
               <p className="text-center text-sm text-muted-foreground">
                 Waiting for host to start sharing...

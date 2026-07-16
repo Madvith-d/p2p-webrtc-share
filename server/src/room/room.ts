@@ -28,13 +28,14 @@ export class RoomManager {
         if (!room) {
             return { ok: false, error: "room-not-found" };
         }
+        const exists = room.peers.some(p => p.socketId === peer.socketId);
+        if (exists) {
+            return { ok: true, room };
+        }
         if (room.peers.length >= 2) {
             return { ok: false, error: "room-full" };
         }
-        const exists = room.peers.some(p => p.socketId === peer.socketId);
-        if (!exists) {
-            room.peers.push(peer);
-        }
+        room.peers.push(peer);
         return { ok: true, room };
     }
     
@@ -70,13 +71,9 @@ export class RoomManager {
         return Math.random().toString(36).substring(2, 15);
     }
 
-    getOtherPeer(currentPeerId : string) : Peer | undefined {
-        for (const [_, room] of this.rooms) {
-            const otherPeer = room.peers.find(peer => peer.socketId !== currentPeerId);
-            if (otherPeer) {
-                return otherPeer;
-            }
-        }
-        return undefined;
+    getOtherPeer(roomId: string, currentPeerId: string): Peer | undefined {
+        const room = this.rooms.get(roomId);
+        if (!room?.peers.some(peer => peer.socketId === currentPeerId)) return;
+        return room.peers.find(peer => peer.socketId !== currentPeerId);
     }
 }
