@@ -1,64 +1,118 @@
 "use client";
+
 import { socket } from "@/lib/socket";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Room } from "../../shared/types";
+import { ArrowRight, LoaderCircle } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
   const [userName, setUserName] = useState("");
   const [roomName, setRoomName] = useState("");
+  const [createPending, setCreatePending] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
+  const [roomTouched, setRoomTouched] = useState(false);
+
+  const cleanName = userName.trim();
+  const cleanRoom = roomName.trim();
+  const nameError = nameTouched && !cleanName;
+  const roomError = roomTouched && !cleanRoom;
 
   useEffect(() => {
     const onRoomCreated = (room: Room) => {
-      toast.success("Room created successfully!");
-      router.push(`/room/${room.roomId}?name=${encodeURIComponent(userName.trim())}`);
+      router.push(`/room/${room.roomId}?name=${encodeURIComponent(cleanName)}`);
     };
     socket.on("room-created", onRoomCreated);
     return () => {
       socket.off("room-created", onRoomCreated);
     };
-  }, [userName, router]);
+  }, [cleanName, router]);
 
   function handleJoinRoom() {
-    if (!userName.trim() || !roomName.trim()) return;
-    router.push(`/room/${roomName.trim()}?name=${encodeURIComponent(userName.trim())}`);
+    setNameTouched(true);
+    setRoomTouched(true);
+    if (!cleanName || !cleanRoom) return;
+    router.push(`/room/${cleanRoom}?name=${encodeURIComponent(cleanName)}`);
   }
 
   function handleCreateRoom() {
-    if (!userName.trim()) return;
+    setNameTouched(true);
+    if (!cleanName || createPending) return;
+    setCreatePending(true);
     socket.emit("create-room", {
-      name: userName.trim(),
+      name: cleanName,
     });
   }
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Peer-to-Peer File Sharing</CardTitle>
-          <CardDescription>Share files with others using WebRTC</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <Label>Enter Your Name</Label>
-          <Input value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="Your name" />
-          <Button className="w-full" onClick={handleCreateRoom}>Create Room</Button>
-          <Label>Room Code</Label>
-          <Input value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder="Enter room code" />
-          <Button className="w-full" variant="outline" onClick={handleJoinRoom}>Join Room</Button>
-        </CardContent>
-      </Card>
+    <div className="landing-shell">
+      <nav className="landing-nav" aria-label="Primary">
+        <a className="landing-wordmark" href="#transfer" aria-label="P2P Share home">
+          p2p/share
+        </a>
+        <a className="landing-nav__action" href="#transfer">
+          Start
+          <ArrowRight aria-hidden="true" size={15} strokeWidth={1.8} />
+        </a>
+      </nav>
+
+      <main className="landing-main">
+        <header className="landing-intro">
+          <p className="landing-status"><span aria-hidden="true" /> Direct browser transfer</p>
+          <h1 className="landing-title" id="landing-title">Move a file. Leave no copy.</h1>
+          <p className="landing-lede">One private room. Two browsers. Nothing stored in between.</p>
+        </header>
+
+        <section className="transfer-panel" id="transfer" aria-labelledby="transfer-title">
+          <h2 id="transfer-title">Choose a route</h2>
+          <form className="transfer-form" onSubmit={(event) => { event.preventDefault(); handleCreateRoom(); }} noValidate>
+            <article className="transfer-route">
+              <div className="transfer-route__copy">
+                <span className="transfer-route__number">01</span>
+                <div><h3>Create a room</h3><p>Get a private link to share.</p></div>
+              </div>
+              <div className="transfer-route__controls">
+                <div className="transfer-field">
+                  <label htmlFor="display-name">Your name</label>
+                  <input className="transfer-input" id="display-name" value={userName} onBlur={() => setNameTouched(true)} onChange={(event) => setUserName(event.target.value)} placeholder="e.g. Alex" autoComplete="name" aria-invalid={nameError} aria-describedby="name-help" required />
+                  <p className="transfer-field__help" id="name-help" data-error={nameError}>{nameError ? "Add a name so the other person can identify you." : "Visible only inside this room."}</p>
+                </div>
+                <button className="transfer-button transfer-button--primary" type="submit" disabled={createPending} data-state={createPending ? "loading" : "default"}>
+                  {createPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <ArrowRight aria-hidden="true" />}
+                  {createPending ? "Creating room" : "Create room"}
+                </button>
+              </div>
+            </article>
+
+            <article className="transfer-route">
+              <div className="transfer-route__copy">
+                <span className="transfer-route__number">02</span>
+                <div><h3>Join a room</h3><p>Use the code someone sent you.</p></div>
+              </div>
+              <div className="transfer-route__controls">
+                <div className="transfer-field">
+                  <label htmlFor="room-code">Room code</label>
+                  <input className="transfer-input" id="room-code" value={roomName} onBlur={() => setRoomTouched(true)} onChange={(event) => setRoomName(event.target.value)} placeholder="Paste the shared code" autoComplete="off" spellCheck={false} aria-invalid={roomError} aria-describedby="room-help" />
+                  <p className="transfer-field__help" id="room-help" data-error={roomError}>{roomError ? "Paste the room code from the shared link." : "The code is part of the room link."}</p>
+                </div>
+                <button className="transfer-button transfer-button--secondary" type="button" onClick={handleJoinRoom}>Join room</button>
+              </div>
+            </article>
+          </form>
+        </section>
+
+        <dl className="landing-trust" aria-label="Transfer facts">
+          <div><dt>Path</dt><dd>Peer to peer</dd></div>
+          <div><dt>Storage</dt><dd>None</dd></div>
+          <div><dt>Account</dt><dd>Not required</dd></div>
+        </dl>
+      </main>
+
+      <footer className="landing-footer">
+        <p className="landing-footer__statement">The server makes the introduction. Your browsers do the rest.</p>
+        <div className="landing-footer__meta"><span>p2p/share · signaling only</span><a href="https://github.com/madvithd/p2p-webrtc-share">View source</a></div>
+      </footer>
     </div>
   );
 }

@@ -1,0 +1,8 @@
+{
+  "date": "2026-07-16",
+  "font_stack": "Inter body, JetBrains Mono headings, Geist Mono utility",
+  "palette": "Existing OKLCH shadcn tokens",
+  "motion": "motion-cut",
+  "spacing": "Tailwind defaults; Hallmark 4pt scale added",
+  "framework": "Next.js 16 App Router, React 19, Tailwind CSS 4"
+}

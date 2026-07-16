@@ -1,0 +1,24 @@
+[
+  {
+    "date": "2026-07-16",
+    "macrostructure": "Workbench",
+    "theme": "Midnight",
+    "enrichment": "none",
+    "brief": "Room page redesign — dark P2P file transfer room (same theme as landing)"
+  },
+
+  {
+    "date": "2026-07-16",
+    "macrostructure": "Index-First",
+    "theme": "Midnight",
+    "enrichment": "none",
+    "brief": "Dark P2P WebRTC homepage redesign"
+  },
+  {
+    "date": "2026-07-16",
+    "macrostructure": "Split Studio",
+    "theme": "Almanac",
+    "enrichment": "none",
+    "brief": "P2P WebRTC file-sharing landing page"
+  }
+]

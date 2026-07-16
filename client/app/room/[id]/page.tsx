@@ -5,19 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { socket } from "@/lib/socket";
 import { toast } from "sonner";
 import { ConnectionManager } from "@/webrtc/connection";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Room } from "@shared/types";
-import { Users, Copy, Loader2, CheckCircle, Crown } from "lucide-react";
+import { LoaderCircle, ArrowLeft, Copy, Check, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function RoomPage() {
@@ -33,6 +22,7 @@ export default function RoomPage() {
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>("new");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
+  const [sendState, setSendState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const connectionRef = useRef<ConnectionManager | null>(null);
 
   useEffect(() => {
@@ -74,126 +64,169 @@ export default function RoomPage() {
     navigator.clipboard.writeText(roomId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast.success("Room ID copied to clipboard!");
+    toast.success("Room ID copied");
   };
 
   const handleStartSharing = async () => {
     if (!file || !connectionRef.current) return;
+    setSendState("loading");
     setProgress(0);
-    await connectionRef.current.send(file, (sent, total) => setProgress(total ? sent / total : 1));
-    toast.success("File sent");
+    try {
+      await connectionRef.current.send(file, (sent, total) => setProgress(total ? sent / total : 1));
+      setSendState("success");
+      toast.success("File sent");
+    } catch {
+      setSendState("error");
+      toast.error("Transfer failed");
+    }
   };
 
-  if (!room) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 flex flex-col items-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Connecting to room...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const isConnected = connectionState === "connected";
+  const peerCount = room?.peers.length ?? 0;
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Card>
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <CardTitle>Waiting Room</CardTitle>
-            </div>
-            <CardDescription>
-              Room ID: <code className="font-mono text-sm bg-muted px-1.5 py-0.5 rounded">{roomId}</code>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Button variant="outline" size="sm" onClick={copyRoomId}>
-                <Copy className="mr-2 h-4 w-4" />
-                {copied ? "Copied!" : "Copy Room ID"}
-              </Button>
-              {isCreator && (
-                <Badge variant="secondary" className="ml-2">
-                  <Crown className="mr-1 h-3 w-3" />
-                  Host
-                </Badge>
-              )}
-            </div>
+    <div className="room-shell">
+      <nav className="room-bar" aria-label="Room navigation">
+        <div className="room-bar__start">
+          <a className="room-bar__wordmark" href="/" aria-label="Back to home">
+            <ArrowLeft aria-hidden="true" size={14} strokeWidth={1.8} style={{ marginRight: "0.5rem", verticalAlign: "middle" }} />
+            p2p/share
+          </a>
+          <span className="room-bar__status">
+            <span aria-hidden="true" />
+            {isConnected ? "connected" : "connecting"}
+          </span>
+        </div>
+        <a className="room-bar__leave" href="/">Leave room</a>
+      </nav>
 
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Participants ({room.peers.length})
-                </h3>
-                <span className="text-sm text-muted-foreground">
-                  {connectionState === "connected" ? (
-                    <span className="flex items-center gap-1 text-green-500">
-                      <span className="h-2 w-2 rounded-full bg-green-500" />
-                      Connected
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-red-500">
-                      <span className="h-2 w-2 rounded-full bg-red-500" />
-                      {connectionState === "new" ? "Waiting" : connectionState}
-                    </span>
-                  )}
+      <main className="room-main">
+        {!room ? (
+          <section className="room-panel room-panel--center">
+            <div className="room-spinner" aria-label="Connecting" />
+            <p className="room-muted">Connecting to room</p>
+          </section>
+        ) : (
+          <section className="room-panel" aria-label="Room">
+            <header className="room-header">
+              <p className="room-header__indicator">
+                <span aria-hidden="true" />
+                Waiting Room
+              </p>
+              <h1 className="room-title">
+                {isCreator ? "Share a file" : "Ready to receive"}
+              </h1>
+              <div className="room-meta">
+                <code className="room-meta__code">{roomId}</code>
+                <button
+                  className="room-meta__copy"
+                  onClick={copyRoomId}
+                  data-state={copied ? "success" : "default"}
+                  aria-label={copied ? "Room ID copied" : "Copy room ID"}
+                >
+                  {copied ? <Check aria-hidden="true" size={12} strokeWidth={2.5} /> : <Copy aria-hidden="true" size={12} strokeWidth={2.5} />}
+                  {copied ? "Copied" : "Copy ID"}
+                </button>
+              </div>
+            </header>
+
+            <hr className="room-divider" role="presentation" />
+
+            <div className="room-section">
+              <div className="room-section__head">
+                <span>
+                  <Users aria-hidden="true" size={12} strokeWidth={2} style={{ marginRight: "0.35rem", verticalAlign: "middle" }} />
+                  Participants ({peerCount})
+                </span>
+                <span className="room-connection">
+                  <span className={`room-connection__dot${isConnected ? " room-connection__dot--active" : ""}`} aria-hidden="true" />
+                  {isConnected ? "Connected" : connectionState === "new" ? "Waiting" : connectionState}
                 </span>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="room-participants">
                 {room.peers.map((peer, index) => (
-                  <div
-                    key={peer.socketId}
-                    className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>
-                        {peer.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
+                  <div key={peer.socketId} className="room-peer">
+                    <div className="room-peer__avatar" aria-hidden="true">
+                      {peer.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="room-peer__info">
+                      <div className="room-peer__name">
                         {peer.name}
-                        {peer.socketId === socket.id && (
-                          <span className="ml-2 text-xs text-muted-foreground">(You)</span>
-                        )}
-                        {index === 0 && (
-                          <Badge variant="secondary" className="ml-2">
-                            <Crown className="mr-1 h-3 w-3" />
-                            Host
-                          </Badge>
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {peer.socketId === socket.id ? "Connected" : "Waiting..."}
-                      </p>
+                        {peer.socketId === socket.id && <span className="room-peer__tag">You</span>}
+                        {index === 0 && <span className="room-peer__tag">Host</span>}
+                      </div>
+                      <div className="room-peer__status">
+                        {peer.socketId === socket.id ? "Connected" : "Waiting"}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {isCreator && room.peers.length > 1 && (
-              <div className="space-y-2">
-                <Input type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
-                <Button className="w-full" size="lg" disabled={!file || connectionState !== "connected"} onClick={handleStartSharing}>
-                  Send File
-                </Button>
-              </div>
+            {isCreator && peerCount > 1 && (
+              <>
+                <hr className="room-divider" role="presentation" />
+                <div className="room-section">
+                  <div className="room-section__head">
+                    <span>Transfer</span>
+                  </div>
+                  <div className="room-transfer">
+                    <div className="room-transfer__input">
+                      <label htmlFor="file-input">Choose a file to send</label>
+                      <input
+                        id="file-input"
+                        className="room-file-input"
+                        type="file"
+                        onChange={(event) => {
+                          setFile(event.target.files?.[0] ?? null);
+                          setSendState("idle");
+                        }}
+                      />
+                    </div>
+                    <button
+                      className="room-send"
+                      disabled={!file || !isConnected}
+                      data-state={sendState}
+                      onClick={handleStartSharing}
+                    >
+                      {sendState === "loading" ? (
+                        <LoaderCircle aria-hidden="true" className="animate-spin" size={16} strokeWidth={2.5} />
+                      ) : null}
+                      {sendState === "loading" ? "Sending" : sendState === "success" ? "Sent" : "Send File"}
+                    </button>
+                    {progress > 0 && (
+                      <div className="room-progress">
+                        <div className="room-progress__track">
+                          <div
+                            className="room-progress__fill"
+                            style={{ width: `${Math.round(progress * 100)}%` }}
+                          />
+                        </div>
+                        <span className="room-progress__label">{Math.round(progress * 100)}%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
-            {progress > 0 && <p className="text-center text-sm">Transfer progress: {Math.round(progress * 100)}%</p>}
+
             {!isCreator && (
-              <p className="text-center text-sm text-muted-foreground">
-                Waiting for host to start sharing...
+              <hr className="room-divider" role="presentation" />
+            )}
+
+            {!isCreator && (
+              <p className="room-waiting">
+                {peerCount < 2 ? "Waiting for the host to connect…" : "The host will send a file shortly."}
               </p>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </section>
+        )}
+      </main>
+
+      <footer className="room-footer">
+        p2p/share &middot; signaling only
+      </footer>
     </div>
   );
 }
