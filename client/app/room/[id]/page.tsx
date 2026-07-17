@@ -50,11 +50,16 @@ export default function RoomPage() {
 
     socket.on("room-updated", onRoomUpdated);
     socket.on("room-created", onRoomCreated);
+    socket.on("join-error", (error: string) => {
+      toast.error(error === "room-not-found" ? "Room not found" : "Room is full");
+      router.push("/");
+    });
     socket.emit("join-room", { roomId, name: userName });
 
     return () => {
       socket.off("room-updated", onRoomUpdated);
       socket.off("room-created", onRoomCreated);
+      socket.off("join-error");
       connection.close();
       connectionRef.current = null;
     };

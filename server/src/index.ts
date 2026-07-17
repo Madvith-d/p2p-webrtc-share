@@ -31,7 +31,7 @@ io.on("connection", (socket) => {
     };
     const result = roomManager.addPeerToRoom(payload.roomId, peer);
     if (!result.ok) {
-      socket.emit(result.error);
+      socket.emit("join-error", result.error);
       return;
     }
     socket.join(payload.roomId);
