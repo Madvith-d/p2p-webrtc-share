@@ -1114,3 +1114,159 @@ body {
     grid-column: 1 / -1;
   }
 }
+
+.room-progress-card {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border: var(--rule-hairline) solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-paper-3);
+}
+
+.room-progress-card--incoming {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-rule));
+}
+
+.room-progress-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-width: 0;
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+}
+
+.room-progress-card__head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-progress-card__head strong {
+  flex-shrink: 0;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.room-progress-card__meta {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.room-waiting--hint {
+  padding-block-start: 0;
+  font-size: var(--text-xs);
+}
+
+.room-name-gate {
+  gap: var(--space-md);
+}
+
+.room-name-gate .room-title {
+  margin-block-start: calc(var(--space-xs) * -1);
+}
+
+.room-name-form {
+  display: grid;
+  width: min(100%, 22rem);
+  gap: var(--space-xs);
+  text-align: left;
+}
+
+.room-name-form label {
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.room-name-form .room-send {
+  margin-block-start: var(--space-xs);
+}
+
+.room-modal-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-md);
+  background: rgb(17 21 24 / 58%);
+}
+
+.room-modal {
+  display: grid;
+  width: min(100%, 27rem);
+  gap: var(--space-lg);
+  border: var(--rule-hairline) solid var(--color-rule-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper-2);
+  padding: var(--space-lg);
+  box-shadow: 0 1.5rem 4rem rgb(17 21 24 / 22%);
+}
+
+.room-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.room-modal__head h2 {
+  margin-block-start: var(--space-xs);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.room-modal__close {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.room-modal__close:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.room-qr {
+  display: grid;
+  place-items: center;
+  width: fit-content;
+  margin-inline: auto;
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: var(--space-sm);
+}
+
+.room-modal__copy {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.room-modal__actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .room-modal__close:hover {
+    background: var(--color-paper-3);
+    color: var(--color-ink);
+  }
+}

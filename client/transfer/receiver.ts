@@ -1,13 +1,19 @@
 import { assembleFile, downloadFile } from "./assembler";
 import { parseMessage, type FileMetadata } from "./protocol";
 
+export type FileReceiverCallbacks = {
+  onStart?: (metadata: FileMetadata) => void;
+  onProgress?: (received: number, total: number) => void;
+  onComplete?: (metadata: FileMetadata) => void;
+};
+
 export class FileReceiver {
   private metadata: FileMetadata | null = null;
   private chunks: ArrayBuffer[] = [];
   private pendingIndex: number | null = null;
   private receivedBytes = 0;
 
-  constructor(private onProgress?: (received: number, total: number) => void) {}
+  constructor(private readonly callbacks: FileReceiverCallbacks = {}) {}
 
   receive(data: string | ArrayBuffer) {
     if (typeof data !== "string") return this.receiveChunk(data);
@@ -19,6 +25,7 @@ export class FileReceiver {
       this.metadata = message;
       this.chunks = new Array(Math.ceil(message.fileSize / message.chunkSize));
       this.receivedBytes = 0;
+      this.callbacks.onStart?.(message);
     } else if (message.type === "chunk") {
       if (!this.metadata || this.pendingIndex !== null || message.index >= this.chunks.length) {
         throw new Error("Invalid chunk header");
@@ -26,8 +33,11 @@ export class FileReceiver {
       this.pendingIndex = message.index;
     } else {
       if (!this.metadata || this.pendingIndex !== null) throw new Error("Transfer is incomplete");
-      const file = assembleFile(this.metadata, this.chunks);
-      downloadFile(file, this.metadata.fileName);
+      const metadata = this.metadata;
+      const file = assembleFile(metadata, this.chunks);
+      downloadFile(file, metadata.fileName);
+      this.callbacks.onProgress?.(metadata.fileSize, metadata.fileSize);
+      this.callbacks.onComplete?.(metadata);
       this.reset();
       return file;
     }
@@ -42,7 +52,7 @@ export class FileReceiver {
     this.chunks[this.pendingIndex] = chunk;
     this.pendingIndex = null;
     this.receivedBytes += chunk.byteLength;
-    this.onProgress?.(this.receivedBytes, this.metadata.fileSize);
+    this.callbacks.onProgress?.(this.receivedBytes, this.metadata.fileSize);
   }
 
   private reset() {

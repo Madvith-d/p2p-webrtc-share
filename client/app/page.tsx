@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Room } from "../../shared/types";
 import { ArrowRight, LoaderCircle } from "lucide-react";
+import { USERNAME_STORAGE_KEY } from "@/lib/constants";
 
 export default function Home() {
   const router = useRouter();
@@ -20,6 +21,13 @@ export default function Home() {
   const roomError = roomTouched && !cleanRoom;
 
   useEffect(() => {
+    const savedName = window.localStorage.getItem(USERNAME_STORAGE_KEY);
+    if (!savedName) return;
+    const timer = window.setTimeout(() => setUserName(savedName), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const onRoomCreated = (room: Room) => {
       router.push(`/room/${room.roomId}?name=${encodeURIComponent(cleanName)}`);
     };
@@ -29,16 +37,22 @@ export default function Home() {
     };
   }, [cleanName, router]);
 
+  function rememberName(name: string) {
+    window.localStorage.setItem(USERNAME_STORAGE_KEY, name);
+  }
+
   function handleJoinRoom() {
     setNameTouched(true);
     setRoomTouched(true);
     if (!cleanName || !cleanRoom) return;
+    rememberName(cleanName);
     router.push(`/room/${cleanRoom}?name=${encodeURIComponent(cleanName)}`);
   }
 
   function handleCreateRoom() {
     setNameTouched(true);
     if (!cleanName || createPending) return;
+    rememberName(cleanName);
     setCreatePending(true);
     socket.emit("create-room", {
       name: cleanName,
@@ -70,13 +84,13 @@ export default function Home() {
             <article className="transfer-route">
               <div className="transfer-route__copy">
                 <span className="transfer-route__number">01</span>
-                <div><h3>Create a room</h3><p>Get a private link to share.</p></div>
+                <div><h3>Create a room</h3><p>Get a private link or QR code to share.</p></div>
               </div>
               <div className="transfer-route__controls">
                 <div className="transfer-field">
                   <label htmlFor="display-name">Your name</label>
                   <input className="transfer-input" id="display-name" value={userName} onBlur={() => setNameTouched(true)} onChange={(event) => setUserName(event.target.value)} placeholder="e.g. Alex" autoComplete="name" aria-invalid={nameError} aria-describedby="name-help" required />
-                  <p className="transfer-field__help" id="name-help" data-error={nameError}>{nameError ? "Add a name so the other person can identify you." : "Visible only inside this room."}</p>
+                  <p className="transfer-field__help" id="name-help" data-error={nameError}>{nameError ? "Add a name so the other person can identify you." : "Remembered on this device. Visible only inside this room."}</p>
                 </div>
                 <button className="transfer-button transfer-button--primary" type="submit" disabled={createPending} data-state={createPending ? "loading" : "default"}>
                   {createPending ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <ArrowRight aria-hidden="true" />}
@@ -88,13 +102,13 @@ export default function Home() {
             <article className="transfer-route">
               <div className="transfer-route__copy">
                 <span className="transfer-route__number">02</span>
-                <div><h3>Join a room</h3><p>Use the code someone sent you.</p></div>
+                <div><h3>Join a room</h3><p>Paste the code, or open a shared QR link.</p></div>
               </div>
               <div className="transfer-route__controls">
                 <div className="transfer-field">
                   <label htmlFor="room-code">Room code</label>
                   <input className="transfer-input" id="room-code" value={roomName} onBlur={() => setRoomTouched(true)} onChange={(event) => setRoomName(event.target.value)} placeholder="Paste the shared code" autoComplete="off" spellCheck={false} aria-invalid={roomError} aria-describedby="room-help" />
-                  <p className="transfer-field__help" id="room-help" data-error={roomError}>{roomError ? "Paste the room code from the shared link." : "The code is part of the room link."}</p>
+                  <p className="transfer-field__help" id="room-help" data-error={roomError}>{roomError ? "Paste the room code from the shared link." : "A QR scan opens the room directly."}</p>
                 </div>
                 <button className="transfer-button transfer-button--secondary" type="button" onClick={handleJoinRoom}>Join room</button>
               </div>

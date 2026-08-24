@@ -1,7 +1,7 @@
-import { socket } from "../lib/socket";
+import { socket } from "@/lib/socket";
 import { createPeerConnection } from "./peer";
 import { createOffer, handleAnswer, handleCandidate, handleOffer } from "./signaling";
-import { FileReceiver } from "../transfer/receiver";
+import { FileReceiver, type FileReceiverCallbacks } from "../transfer/receiver";
 import { sendFile } from "../transfer/sender";
 
 export class ConnectionManager {
@@ -16,11 +16,11 @@ export class ConnectionManager {
   initialize(
     roomId: string,
     onStateChange: (state: RTCPeerConnectionState) => void,
-    onReceiveProgress?: (received: number, total: number) => void,
+    receiverCallbacks: FileReceiverCallbacks = {},
   ) {
     this.roomId = roomId;
     this.onStateChange = onStateChange;
-    this.receiver = new FileReceiver(onReceiveProgress);
+    this.receiver = new FileReceiver(receiverCallbacks);
     socket.on("offer", this.onOffer);
     socket.on("answer", this.onAnswer);
     socket.on("ice-candidate", this.onCandidate);
@@ -36,7 +36,7 @@ export class ConnectionManager {
   }
 
   async send(file: File, onProgress?: (sent: number, total: number) => void) {
-    if (!this.channel) throw new Error("Data channel is not ready");
+    if (!this.channel || this.channel.readyState !== "open") throw new Error("Data channel is not ready");
     if (this.sending) throw new Error("A transfer is already in progress");
     // ponytail: version 1 sends one file at a time; add transfer IDs before multiplexing.
     this.sending = true;
@@ -105,7 +105,13 @@ export class ConnectionManager {
 
   private configureChannel(channel: RTCDataChannel) {
     channel.binaryType = "arraybuffer";
-    channel.onmessage = ({ data }: MessageEvent<string | ArrayBuffer>) => this.receiver.receive(data);
+    channel.onmessage = ({ data }: MessageEvent<string | ArrayBuffer>) => {
+      try {
+        this.receiver.receive(data);
+      } catch (error) {
+        console.error("Unable to receive file:", error);
+      }
+    };
     this.channel = channel;
   }
 }
